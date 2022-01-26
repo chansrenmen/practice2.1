@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Title</title>
+</head>
+<body>
+  <div style="max-width: 500px; margin-left: auto; margin-right: auto; margin-top: 20px;">
+
+    <!-- Сообщение которое будем показывать при успешной отправки формы -->
+    <div class="form-result d-none">Форма успешно отправлена!</div>
+    <!-- Форма -->
+    <form id="form" action="assets/php/process-form.php" method="post" novalidate>
+      <!-- Капча -->
+      <div class="captcha">
+        <div class="captcha__image-reload">
+          <img class="captcha__image" src="assets/php/captcha.php" width="132" alt="captcha">
+          <button type="button" class="captcha__refresh"></button>
+        </div>
+        <div class="captcha__group">
+          <label for="captcha">Код, изображенный на картинке</label>
+          <input type="text" name="captcha" id="captcha">
+          <div class="invalid-feedback"></div>
+        </div>
+      </div>
+      <!-- Кнопка "Отправить" -->
+      <button type="submit">Отправить</button>
+    </form>
+
+  </div>
+
+  <script>
+    const refreshCaptcha = (target) => {
+      const captchaImage = target.closest('.captcha__image-reload').querySelector('.captcha__image');
+      captchaImage.src = 'assets/php/captcha.php?r=' + new Date().getUTCMilliseconds();
+    }
+
+    const captchaBtn = document.querySelector('.captcha__refresh');
+    captchaBtn.addEventListener('click', (e) => refreshCaptcha(e.target));
+
+    const form = document.querySelector('#form');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        fetch(form.action, {
+          method: form.method,
+          credentials: 'same-origin',
+          body: new FormData(form)
+        })
+          .then((response) => {
+            return response.json();
+          })
+          .then((data) => {
+            document.querySelectorAll('input.is-invalid').forEach((input) => {
+              input.classList.remove('is-invalid');
+              input.nextElementSibling.textContent = '';
+            });
+            if (!data.success) {
+              refreshCaptcha(form.querySelector('.captcha__refresh'));
+              data.errors.forEach(error => {
+                const input = form.querySelector(`[name="${error[0]}"]`);
+                if (input) {
+                  input.classList.add('is-invalid');
+                  input.nextElementSibling.textContent = error[1];
+                }
+              })
+            } else {
+              form.reset();
+              form.querySelector('.captcha__refresh').disabled = true;
+              form.querySelector('[type=submit]').disabled = true;
+              document.querySelector('.form-result').classList.remove('d-none');
+            }
+          });
+      } catch (error) {
+        console.error('Ошибка:', error);
+      }
+    });
+  </script>
+
+</body>
+
+</html>
